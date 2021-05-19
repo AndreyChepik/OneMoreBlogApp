@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404
-from .models import Post
-from .forms import EmailPostForm
+from .models import Post, Comment
+from .forms import EmailPostForm, CommentForm
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.generic import ListView
 from django.core.mail import send_mail
@@ -34,24 +34,27 @@ class PostListView(ListView):
     template_name = 'blog/post/list.html'
 
 
-
-# def post_list(request):
-#     posts_list = Post.published.all()
-#     paginator = Paginator(posts_list, 3)  # три поста на каждую страницу
-#     page = request.GET.get('page')
-#     try:
-#         posts = paginator.page(page)
-#     except PageNotAnInteger:
-#         # return first page if page is not an integer
-#         posts = paginator.page(1)
-#     except EmptyPage:
-#         # return last page if page is out of range
-#         posts = paginator.page(paginator.num_pages)
-#     return render(request, 'blog/post/list.html', {'page': page, 'posts': posts})
-
-
 def post_detail(request, year, month, day, post):
     post = get_object_or_404(Post, slug=post, status='published',
                              publish__year=year, publish__month=month,
                              publish__day=day)
-    return render(request, 'blog/post/detail.html', {'post': post})
+    # список комментариев для поста
+    comments = post.comments.filter(active=True)
+
+    new_comment = None
+
+    if request.method == 'POST':
+        # постим комментарий
+        comment_form = CommentForm(data=request.POST)
+        if comment_form.is_valid():
+            # создаем объект комментария, но пока не сохраняем в базу
+            new_comment = comment_form.save(commit=False)
+            # привязываем текущий пост к комментарию
+            new_comment.post = post
+            # сохраняем комментарий в базу данных
+            new_comment.save()
+    else:
+        comment_form = CommentForm()
+    return render(request, 'blog/post/detail.html', {'post': post, 'comments':comments,
+                                                     'new_comment': new_comment,
+                                                     'comment_form':comment_form})

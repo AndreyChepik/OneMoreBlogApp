@@ -10,6 +10,8 @@
                 {{ post.title }}
             </a>
         </h2>
+        <p class="tags">Tags: {{ post.tags.all|join:", " }}</p>
+<!--     join - фильтр, работает так же как и join() в python-->
         <p class="date">
             Published {{ post.publish }} by {{ post.author }}
         </p>
