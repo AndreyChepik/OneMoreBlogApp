@@ -4,6 +4,7 @@ from .forms import EmailPostForm, CommentForm
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.generic import ListView
 from django.core.mail import send_mail
+from taggit.models import Tag
 
 
 def post_share(request, post_id):
@@ -58,3 +59,23 @@ def post_detail(request, year, month, day, post):
     return render(request, 'blog/post/detail.html', {'post': post, 'comments':comments,
                                                      'new_comment': new_comment,
                                                      'comment_form':comment_form})
+
+
+def post_list(request, tag_slug=None):
+    object_list = Post.published.all()
+    tag = None
+    if tag_slug:
+        tag = get_object_or_404(Tag, slug=tag_slug)
+        object_list = object_list.filter(tags__in=[tag])
+
+    paginator = Paginator(object_list, 3) # по три поста на страницу
+    page = request.GET.get('page')
+    try:
+        posts = paginator.page(page)
+    except PageNotAnInteger:
+        # Если страница не число, то выводим первую страницу
+        posts = paginator.page(1)
+    except EmptyPage:
+        # если номер страницы за пределами доступных, то выводим последнюю страницу
+        posts = paginator.page(paginator.num_pages)
+    return render(request, 'blog/post/list.html', {'page': page, 'posts': posts, 'tag': tag})
